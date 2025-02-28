@@ -9,6 +9,7 @@ public class CharacterController : MonoBehaviour
 {
     [Header("Targets")]
     [SerializeField] private List<GameObject> _targets;
+    private Dictionary<GameObject, bool> _occupiedTargets;
     private NavMeshAgent _character;
     private Animations _animations;
     private int _currentIndex;
@@ -17,12 +18,22 @@ public class CharacterController : MonoBehaviour
     {
         _character = GetComponent<NavMeshAgent>();
         _animations = GetComponent<Animations>();
+        _occupiedTargets = new Dictionary<GameObject, bool>();
+
+        foreach(var target in _targets)
+        {
+            _occupiedTargets[target] = false;
+        }
         NextDestination();
     }
 
     private void Update()
     {
-        if (_character.remainingDistance <= _character.stoppingDistance && !_character.pathPending) NextDestination();
+        if (_character.remainingDistance <= _character.stoppingDistance && !_character.pathPending)
+        {
+            OnDestination();
+            NextDestination();
+        }
 
         CheckArea();
     }
@@ -38,9 +49,15 @@ public class CharacterController : MonoBehaviour
 
     private void NextDestination()
     {
-        _currentIndex = Random.Range(0, _targets.Count);
-        _character.SetDestination(_targets[_currentIndex].transform.position);
-        StartCoroutine(StopForRandomTime());
+        List<GameObject> freeTargets = _targets.FindAll(target => !_occupiedTargets[target]);
+
+        if(freeTargets.Count > 0)
+        {
+            _currentIndex = Random.Range(0, freeTargets.Count);
+            _occupiedTargets[freeTargets[_currentIndex]] = true;
+            _character.SetDestination(freeTargets[_currentIndex].transform.position);
+            StartCoroutine(StopForRandomTime());
+        }
     }
 
     private void CheckArea()
@@ -50,20 +67,14 @@ public class CharacterController : MonoBehaviour
 
         if (NavMesh.SamplePosition(transform.position, out hit, 0f, areaIndex))
         {
-            if(_character.velocity.magnitude == 0)
-            {
-                _animations.Dance();
-                Debug.Log("dance");
-            }
-            else
-            {
-                _animations.DanceOver();
-                Debug.Log("vsyo");
-            }
+            if(_character.velocity.magnitude == 0) _animations.Dance();
+            else _animations.DanceOver();
         }
-        else if(areaIndex != 3 && _character.isStopped)
-        {
-            _animations.Idle();
-        }
+        else if(areaIndex != 3 && _character.isStopped) _animations.Idle();
+    }
+
+    private void OnDestination()
+    {
+        if(_currentIndex >= 0 && _currentIndex < _targets.Count) _occupiedTargets[_targets[_currentIndex]] = false;
     }
 }
