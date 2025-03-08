@@ -20,6 +20,10 @@ public class CharacterController : MonoBehaviour
         _animations = GetComponent<Animations>();
         _occupiedTargets = new Dictionary<GameObject, bool>();
 
+        if (_character == null) return;
+
+        if (_animations == null) return;
+
         foreach(var target in _targets)
         {
             _occupiedTargets[target] = false;
